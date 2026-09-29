@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MAJOPAU - Gestão de Descontaminação</title>
+    <style>
+        :root {
+            --primary: #0056b3;
+            --primary-dark: #003d80;
+            --danger: #b30000;
+            --success: #16a34a;
+            --bg: #f8fafc;
+            --card-bg: #ffffff;
+        }
+
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; background-color: var(--bg); color: #1e293b; }
+        
+        .navbar { background: #0f172a; color: white; padding: 12px 20px; display: flex; justify-content: space-between; align-items: center; }
+        .navbar h1 { margin: 0; font-size: 18px; color: #fff; }
+        .nav-tabs { display: flex; gap: 8px; background: #1e293b; padding: 8px 20px; border-bottom: 2px solid #334155; }
+        .tab-btn { background: transparent; border: none; color: #94a3b8; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 13px; }
+        .tab-btn.active { background: var(--primary); color: white; }
+
+        .content { max-width: 1050px; margin: 20px auto; padding: 0 15px; }
+        .tab-content { display: none; background: var(--card-bg); padding: 20px; border-radius: 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+        .tab-content.active { display: block; }
+
+        .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-bottom: 12px; }
+        .form-group { display: flex; flex-direction: column; }
+        .form-group label { font-size: 11px; font-weight: bold; margin-bottom: 4px; text-transform: uppercase; color: #475569; }
+        .form-group input, .form-group select { padding: 8px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 13px; }
+        
+        .btn { padding: 8px 16px; background: var(--primary); color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 12px; }
+        .btn:hover { background: var(--primary-dark); }
+        .btn-success { background: var(--success); }
+        .btn-warning { background: #d97706; }
+        .btn-secondary { background: #64748b; }
+
+        table.data-table { width: 100%; border-collapse: collapse; margin-top: 12px; font-size: 12px; }
+        table.data-table th, table.data-table td { border: 1px solid #e2e8f0; padding: 8px; text-align: left; }
+        table.data-table th { background: #f1f5f9; font-weight: bold; color: #334155; }
+
+        /* CERTIFICADO OFICIAL */
+        .cert-container { border: 1px solid #666; padding: 20px; background: white; font-size: 11px; }
+        .cert-header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 5px; margin-bottom: 10px; }
+        .cert-title-section { display: flex; justify-content: space-between; font-weight: bold; font-size: 12px; margin-bottom: 10px; }
+        .cert-section-title { background: #e2e8f0; padding: 4px; font-weight: bold; margin-top: 10px; text-align: center; border: 1px solid #94a3b8; text-transform: uppercase; }
+        
+        table.cert-table { width: 100%; border-collapse: collapse; margin-top: 5px; }
+        table.cert-table th, table.cert-table td { border: 1px solid #666; text-align: center; padding: 3px; font-size: 10px; }
+        table.cert-table td input { width: 90%; border: none; text-align: center; font-size: 10px; background: transparent; }
+
+        .cert-signatures { display: flex; justify-content: space-between; margin-top: 25px; text-align: center; font-size: 10px; }
+        .sig-line { border-top: 1px solid #000; width: 30%; padding-top: 4px; }
+
+        @media print {
+            .navbar, .nav-tabs, .no-print { display: none !important; }
+            body { background: white; margin: 0; }
+            .content { max-width: 100%; margin: 0; padding: 0; }
+            .tab-content { padding: 0; box-shadow: none; border: none; }
+            .cert-container { border: none; }
+            input, select { border: none !important; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="navbar">
+    <h1>MAJOPAU - Gestão de Descontaminação & Equipamentos</h1>
+    <span style="font-size: 12px; color: #94a3b8;">Sistema Integrado v4.0</span>
+</div>
+
+<div class="nav-tabs no-print">
+    <button class="tab-btn active" onclick="switchTab('tab-pesquisa')">🔍 Consultas & Histórico</button>
+    <button class="tab-btn" onclick="switchTab('tab-clientes')">🏢 Gestão de Clientes</button>
+    <button class="tab-btn" onclick="switchTab('tab-equipamentos')">🚚 Ficha do Tanque (Equipamentos)</button>
+    <button class="tab-btn" onclick="switchTab('tab-emissao')">📝 Emitir Certificado</button>
+    <button class="tab-btn" onclick="switchTab('tab-visualizar')">🖨️ Relatório Final</button>
+</div>
+
+<div class="content">
+
+    <!-- 1. PESQUISA MULTI-CRITÉRIO -->
+    <div id="tab-pesquisa" class="tab-content active">
+        <h2>Consulta Geral no Banco de Dados</h2>
+        <p style="font-size: 12px; color: #64748b;">Pesquise por <b>Nº do Equipamento</b>, <b>Placa</b>, <b>Razão Social</b>, <b>CNPJ</b> ou <b>Nº MPJ</b>.</p>
+        
+        <div class="form-grid">
+            <div class="form-group" style="grid-column: span 3;">
+                <input type="text" id="searchInput" placeholder="Digite para buscar em tempo real..." oninput="filtrarGeral()">
+            </div>
+        </div>
+
+        <h3>Histórico de Certificados Emitidos</h3>
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Nº Certificado</th>
+                    <th>Nº Equip.</th>
+                    <th>Placa</th>
+                    <th>Razão Social (Cliente)</th>
+                    <th>Data Emissão</th>
+                    <th>Ação</th>
+                </tr>
+            </thead>
+            <tbody id="historicoTableBody"></tbody>
+        </table>
+    </div>
+
+    <!-- 2. GESTÃO DE CLIENTES -->
+    <div id="tab-clientes" class="tab-content">
+        <h2>Cadastro de Clientes</h2>
+        <form onsubmit="salvarCliente(event)">
+            <input type="hidden" id="cliId">
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>CNPJ:</label>
+                    <input type="text" id="cliCnpj" required placeholder="00.000.000/0000-00">
+                </div>
+                <div class="form-group" style="grid-column: span 2;">
+                    <label>Razão Social / Nome:</label>
+                    <input type="text" id="cliRazao" required placeholder="Razão Social completa">
+                </div>
+            </div>
+            <button type="submit" class="btn btn-success">💾 Salvar Cliente</button>
+        </form>
+
+        <h3 style="margin-top: 20px;">Clientes Cadastrados</h3>
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>CNPJ</th>
+                    <th>Razão Social</th>
+                    <th>Ação</th>
+                </tr>
+            </thead>
+            <tbody id="clientesTableBody"></tbody>
+        </table>
+    </div>
+
+    <!-- 3. FICHA TÉCNICA DO TANQUE / EQUIPAMENTO (LITRAGENS PADRÃO) -->
+    <div id="tab-equipamentos" class="tab-content">
+        <h2>Ficha Técnica do Tanque & Transferência de Proprietário</h2>
+        <form onsubmit="salvarEquipamento(event)">
+            <input type="hidden" id="eqId">
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>Nº do Equipamento (Tanque):</label>
+                    <input type="text" id="eqNum" required placeholder="Ex: 1327041">
+                </div>
+                <div class="form-group">
+                    <label>Placa do Veículo:</label>
+                    <input type="text" id="eqPlaca" required placeholder="Ex: ELB-7C93">
+                </div>
+                <div class="form-group" style="grid-column: span 2;">
+                    <label>Cliente Proprietário Atual:</label>
+                    <select id="eqClienteId" required></select>
+                </div>
+            </div>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>Condutor Habitual:</label>
+                    <input type="text" id="eqCondutor" required placeholder="Nome do motorista">
+                </div>
+                <div class="form-group">
+                    <label>CPF do Condutor:</label>
+                    <input type="text" id="eqCpf" required placeholder="000.000.000-00">
+                </div>
+            </div>
+
+            <h4 style="margin: 15px 0 5px 0;">Litragens Padrão dos Compartimentos (Serão preenchidas automaticamente ao emitir o laudo)</h4>
+            <div class="form-grid">
+                <div class="form-group"><label>1º Comp. (L):</label><input type="text" id="eqV1" value="26.000"></div>
+                <div class="form-group"><label>2º Comp. (L):</label><input type="text" id="eqV2" value="-"></div>
+                <div class="form-group"><label>3º Comp. (L):</label><input type="text" id="eqV3" value="-"></div>
+                <div class="form-group"><label>4º Comp. (L):</label><input type="text" id="eqV4" value="-"></div>
+                <div class="form-group"><label>5º Comp. (L):</label><input type="text" id="eqV5" value="-"></div>
+                <div class="form-group"><label>6º Comp. (L):</label><input type="text" id="eqV6" value="-"></div>
+                <div class="form-group"><label>7º Comp. (L):</label><input type="text" id="eqV7" value="-"></div>
+                <div class="form-group"><label>8º Comp. (L):</label><input type="text" id="eqV8" value="-"></div>
+            </div>
+
+            <button type="submit" class="btn btn-success">💾 Salvar Ficha do Equipamento</button>
+        </form>
+
+        <h3 style="margin-top: 20px;">Tanques Registrados</h3>
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Nº Equipamento</th>
+                    <th>Placa</th>
+                    <th>Proprietário Atual</th>
+                    <th>Condutor</th>
+                    <th>Ações</th>
+                </tr>
+            </thead>
+            <tbody id="equipamentosTableBody"></tbody>
+        </table>
+    </div>
+
+    <!-- 4. EMISSÃO DE CERTIFICADO -->
+    <div id="tab-emissao" class="tab-content">
+        <h2>Emitir Certificado de Descontaminação</h2>
+        <form onsubmit="emitirCertificado(event)">
+            <div class="form-grid">
+                <div class="form-group" style="grid-column: span 2;">
+                    <label>Selecione o Equipamento / Tanque:</label>
+                    <select id="emissaoEquipamentoId" onchange="carregarVolumesAuto(this.value)" required></select>
+                </div>
+                <div class="form-group">
+                    <label>Data de Emissão:</label>
+                    <input type="date" id="emissaoData" required>
+                </div>
+                <div class="form-group">
+                    <label>Horário do Início:</label>
+                    <input type="text" id="emissaoHora" value="13:00 HORAS" required>
+                </div>
+            </div>
+
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>Processo Aplicado:</label>
+                    <input type="text" id="emissaoProcesso" value="Com Ventilação Forçada e Água">
+                </div>
+                <div class="form-group">
+                    <label>Detector de Gás (Série):</label>
+                    <input type="text" id="emissaoDetector" value="C2260031016">
+                </div>
+                <div class="form-group">
+                    <label>Data Última Calibração:</label>
+                    <input type="date" id="emissaoCalibracao" value="2025-06-02">
+                </div>
+                <div class="form-group">
+                    <label>Possui Lacre?</label>
+                    <select id="emissaoLacre"><option value="Não">Não</option><option value="Sim">Sim</option></select>
+                </div>
+            </div>
+
+            <h4 style="margin: 10px 0 5px 0;">Produtos Transportados / Nº ONU por Compartimento nesta Carga</h4>
+            <div class="form-grid">
+                <div class="form-group"><label>1º Comp. (Produto/ONU):</label><input type="text" id="emP1" value="4A / 1824 / Cl. 8"></div>
+                <div class="form-group"><label>2º Comp. (Produto/ONU):</label><input type="text" id="emP2" value="-"></div>
+                <div class="form-group"><label>3º Comp. (Produto/ONU):</label><input type="text" id="emP3" value="-"></div>
+                <div class="form-group"><label>4º Comp. (Produto/ONU):</label><input type="text" id="emP4" value="-"></div>
+            </div>
+
+            <button type="submit" class="btn btn-success" style="font-size: 14px; padding: 10px 20px; margin-top: 10px;">📜 Gerar Certificado MPJ</button>
+        </form>
+    </div>
+
+    <!-- 5. RELATÓRIO FINAL -->
+    <div id="tab-visualizar" class="tab-content">
+        <div class="no-print" style="margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center;">
+            <h3>Documento Final do Certificado</h3>
+            <button class="btn" onclick="window.print()">🖨️ Imprimir / Salvar PDF</button>
+        </div>
+
+        <div class="cert-container">
+            <div class="cert-header">
+                <h2 style="margin: 0; color: var(--danger);">MAJOPAU TRANSPORTES DE COMBUSTÍVEIS LTDA</h2>
+                <p style="margin: 2px 0;">Rod. Governador Mario Covas, 517, KM 291, Nova Valverde, Cariacica, ES - CEP: 29.151-815<br>
+                CNPJ: 06.127.018/0001-35 | Fone/Fax: (27) 99997-4786</p>
+            </div>
+
+            <div class="cert-title-section">
+                <div>Código do registro: <span>10577-2022</span></div>
+                <div style="color: var(--danger);">CERTIFICADO DE DESCONTAMINAÇÃO <span id="vNumCertificado">MPJ00004293/2026</span></div>
+            </div>
+
+            <div class="cert-section-title">DADOS DO CLIENTE E DO VEÍCULO</div>
+            <div style="display: flex; gap: 15px; margin-top: 5px;">
+                <div style="flex: 2;"><b>Razão Social:</b> <span id="vRazao">-</span></div>
+                <div><b>Nº Equipamento:</b> <span id="vEquip">-</span></div>
+                <div><b>Placa:</b> <span id="vPlaca">-</span></div>
+                <div><b>Data:</b> <span id="vData">-</span></div>
+            </div>
+
+            <div class="cert-section-title">FINALIDADE & PROCESSO DE DESCONTAMINAÇÃO</div>
+            <p style="margin: 4px 0;"><b>Finalidade:</b> OUTROS: DESCONTAMINAÇÃO | <b>Processo:</b> <span id="vProcesso">Com Ventilação Forçada e Água</span></p>
+            <p style="margin: 2px 0; font-weight: bold;">PRAZO DE VALIDADE DO SERVIÇO DE DESCONTAMINAÇÃO: 24:00 HORAS.</p>
+
+            <div class="cert-section-title">DETALHES DOS COMPARTIMENTOS</div>
+            <table class="cert-table">
+                <thead>
+                    <tr><th>Item</th><th>1º Comp.</th><th>2º Comp.</th><th>3º Comp.</th><th>4º Comp.</th><th>5º Comp.</th><th>6º Comp.</th><th>7º Comp.</th><th>8º Comp.</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td><b>Volume (L)</b></td><td id="vVol1">26.000</td><td id="vVol2">-</td><td id="vVol3">-</td><td id="vVol4">-</td><td id="vVol5">-</td><td id="vVol6">-</td><td id="vVol7">-</td><td id="vVol8">-</td></tr>
+                    <tr><td><b>Prod / ONU / Cl.</b></td><td id="vProd1">4A / 1824 / Cl. 8</td><td id="vProd2">-</td><td id="vProd3">-</td><td id="vProd4">-</td><td>-</td><td>-</td><td>-</td><td>-</td></tr>
+                    <tr><td><b>Vazão (l/min)</b></td><td>1200</td><td>1200</td><td>1200</td><td>1200</td><td>1200</td><td>1200</td><td>1200</td><td>1200</td></tr>
+                    <tr><td><b>Tempo</b></td><td>1 HORA</td><td>1 HORA</td><td>1 HORA</td><td>1 HORA</td><td>1 HORA</td><td>1 HORA</td><td>1 HORA</td><td>1 HORA</td></tr>
+                </tbody>
+            </table>
+
+            <div class="cert-section-title">DISPOSITIVOS DE SEGURANÇA & PARÂMETROS TÉCNICOS</div>
+            <p style="margin: 4px 0;">
+                <b>Lacre:</b> <span id="vLacre">Não</span> | 
+                <b>Detector de Gás:</b> <span id="vDetector">C2260031016</span> | 
+                <b>Última Calibração:</b> <span id="vCalibracao">02/06/2025</span> | 
+                <b>Regulamentação:</b> PORTARIA INMETRO 445/2021 | <b>Procedimento:</b> PT 001
+            </p>
+
+            <div class="cert-section-title">APROVAÇÃO & OBSERVAÇÕES</div>
+            <p style="margin: 4px 0;"><b>APROVAÇÃO:</b> O equipamento acima identificado foi descontaminado indicando 0% do limite inferior de explosividade e dentro dos limites toleráveis de oxigênio.</p>
+            <p style="margin: 4px 0; background: #f8fafc; padding: 4px; border: 1px solid #e2e8f0;">
+                <b>OBSERVAÇÕES:</b> NÃO ESTÁ APTO A ARMAZENAR E TRANSPORTAR ÁGUA POTÁVEL. FAVOR EXECUTAR O SERVIÇO NO MESMO DIA.<br>
+                <b>HORÁRIO DO INÍCIO DA DESCONTAMINAÇÃO:</b> <span id="vHora">13:00 HORAS</span>
+            </p>
+
+            <div style="font-size: 9px; margin-top: 8px; line-height: 1.2;">
+                <b>Notas:</b> a) Não nos responsabilizamos por serviços realizados por terceiros; b) Ocorrendo intervalo entre emissão e serviço, fazer novas medições antes de trabalho a quente; c) Retirar acessórios de carga e descarga antes de soldas; d) Não nos responsabilizamos por contaminação posterior; e) 1ª Via - Cliente / 2ª Via - IPEM/INMETRO / 3ª Via - Arquivo.
+                <p style="text-align: center; font-weight: bold; margin-top: 3px;">Equipamento descontaminado em conformidade com a Portaria Inmetro 445, de 26 de outubro de 2021.</p>
+            </div>
+
+            <div class="cert-signatures">
+                <div class="sig-line"><b>PAULO ROBERTO M. F. E SILVA</b><br><small>Ass. do Operador</small></div>
+                <div class="sig-line"><b>WESLAINE ARDISSON E SILVA</b><br><small>Ass. do Responsável Operacional</small></div>
+                <div class="sig-line">
+                    <b id="vCondutorNome">EIDER SANTOS DE CARVALHO</b><br>
+                    <small>CPF: <span id="vCondutorCPF">787.681.872-20</span></small><br>
+                    <small>Ass. do Condutor do Veículo</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<script>
+    let clientes = JSON.parse(localStorage.getItem('mjp_clientes')) || [
+        { id: 1, cnpj: '06.127.018/0001-35', razao: 'TRANSPORTADORA CONTATTO LTDA' }
+    ];
+
+    let equipamentos = JSON.parse(localStorage.getItem('mjp_equipamentos')) || [
+        { id: 101, num: '1327041', placa: 'ELB-7C93', clienteId: 1, condutor: 'EIDER SANTOS DE CARVALHO', cpf: '787.681.872-20', v1: '26.000', v2: '-', v3: '-', v4: '-', v5: '-', v6: '-', v7: '-', v8: '-' }
+    ];
+
+    let certificados = JSON.parse(localStorage.getItem('mjp_certificados')) || [
+        { num: 'MPJ00004293/2026', equipNum: '1327041', placa: 'ELB-7C93', razao: 'TRANSPORTADORA CONTATTO LTDA', cnpj: '06.127.018/0001-35', data: '2026-09-28', condutor: 'EIDER SANTOS DE CARVALHO', cpf: '787.681.872-20', hora: '13:00 HORAS', processo: 'Com Ventilação Forçada e Água', detector: 'C2260031016', calibracao: '2025-06-02', lacre: 'Não', vols: ['26.000','-','-','-','-','-','-','-'], prods: ['4A / 1824 / Cl. 8','-','-','-'] }
+    ];
+
+    function switchTab(tabId) {
+        document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+        document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+        document.getElementById(tabId).classList.add('active');
+        if(event && event.target) event.target.classList.add('active');
+    }
+
+    window.onload = function() {
+        renderClientes();
+        renderEquipamentos();
+        renderHistorico();
+        carregarSelects();
+        document.getElementById('emissaoData').valueAsDate = new Date();
+        if(certificados.length > 0) exibirCertificado(certificados[0]);
+    };
+
+    function salvarCliente(e) {
+        e.preventDefault();
+        const id = document.getElementById('cliId').value;
+        const cnpj = document.getElementById('cliCnpj').value;
+        const razao = document.getElementById('cliRazao').value;
+
+        if(id) {
+            const idx = clientes.findIndex(c => c.id == id);
+            clientes[idx] = { id: Number(id), cnpj, razao };
+        } else {
+            clientes.push({ id: Date.now(), cnpj, razao });
+        }
+
+        localStorage.setItem('mjp_clientes', JSON.stringify(clientes));
+        renderClientes();
+        carregarSelects();
+        e.target.reset();
+        document.getElementById('cliId').value = '';
+    }
+
+    function renderClientes() {
+        document.getElementById('clientesTableBody').innerHTML = clientes.map(c => `
+            <tr>
+                <td>${c.cnpj}</td>
+                <td><b>${c.razao}</b></td>
+                <td><button class="btn btn-warning" onclick="editarCliente(${c.id})">✏️ Editar</button></td>
+            </tr>
+        `).join('');
+    }
+
+    function editarCliente(id) {
+        const c = clientes.find(item => item.id == id);
+        document.getElementById('cliId').value = c.id;
+        document.getElementById('cliCnpj').value = c.cnpj;
+        document.getElementById('cliRazao').value = c.razao;
+        switchTab('tab-clientes');
+    }
+
+    function salvarEquipamento(e) {
+        e.preventDefault();
+        const id = document.getElementById('eqId').value;
+        const eqData = {
+            id: id ? Number(id) : Date.now(),
+            num: document.getElementById('eqNum').value,
+            placa: document.getElementById('eqPlaca').value,
+            clienteId: Number(document.getElementById('eqClienteId').value),
+            condutor: document.getElementById('eqCondutor').value,
+            cpf: document.getElementById('eqCpf').value,
+            v1: document.getElementById('eqV1').value,
+            v2: document.getElementById('eqV2').value,
+            v3: document.getElementById('eqV3').value,
+            v4: document.getElementById('eqV4').value,
+            v5: document.getElementById('eqV5').value,
+            v6: document.getElementById('eqV6').value,
+            v7: document.getElementById('eqV7').value,
+            v8: document.getElementById('eqV8').value
+        };
+
+        if(id) {
+            const idx = equipamentos.findIndex(eq => eq.id == id);
+            equipamentos[idx] = eqData;
+        } else {
+            equipamentos.push(eqData);
+        }
+
+        localStorage.setItem('mjp_equipamentos', JSON.stringify(equipamentos));
+        renderEquipamentos();
+        carregarSelects();
+        e.target.reset();
+        document.getElementById('eqId').value = '';
+        alert('Equipamento salvo com sucesso!');
+    }
+
+    function renderEquipamentos() {
+        document.getElementById('equipamentosTableBody').innerHTML = equipamentos.map(eq => {
+            const cli = clientes.find(c => c.id == eq.clienteId) || { razao: 'Desconhecido' };
+            return `
+                <tr>
+                    <td><b style="color:var(--primary);">${eq.num}</b></td>
+                    <td><b>${eq.placa}</b></td>
+                    <td>${cli.razao}</td>
+                    <td>${eq.condutor} (${eq.cpf})</td>
+                    <td><button class="btn btn-warning" onclick="editarEquipamento(${eq.id})">🔄 Editar / Transferir</button></td>
+                </tr>
+            `;
+        }).join('');
+    }
+
+    function editarEquipamento(id) {
+        const eq = equipamentos.find(item => item.id == id);
+        document.getElementById('eqId').value = eq.id;
+        document.getElementById('eqNum').value = eq.num;
+        document.getElementById('eqPlaca').value = eq.placa;
+        document.getElementById('eqClienteId').value = eq.clienteId;
+        document.getElementById('eqCondutor').value = eq.condutor;
+        document.getElementById('eqCpf').value = eq.cpf;
+        document.getElementById('eqV1').value = eq.v1;
+        document.getElementById('eqV2').value = eq.v2;
+        document.getElementById('eqV3').value = eq.v3;
+        document.getElementById('eqV4').value = eq.v4;
+        document.getElementById('eqV5').value = eq.v5;
+        document.getElementById('eqV6').value = eq.v6;
+        document.getElementById('eqV7').value = eq.v7;
+        document.getElementById('eqV8').value = eq.v8;
+        switchTab('tab-equipamentos');
+    }
+
+    function carregarSelects() {
+        document.getElementById('eqClienteId').innerHTML = '<option value="">-- Selecione o Cliente --</option>' +
+            clientes.map(c => `<option value="${c.id}">${c.razao} (${c.cnpj})</option>`).join('');
+
+        document.getElementById('emissaoEquipamentoId').innerHTML = '<option value="">-- Selecione o Equipamento --</option>' +
+            equipamentos.map(eq => {
+                const cli = clientes.find(c => c.id == eq.clienteId) || {};
+                return `<option value="${eq.id}">Tanque Nº ${eq.num} | Placa: ${eq.placa} | Cliente: ${cli.razao}</option>`;
+            }).join('');
+    }
+
+    function emitirCertificado(e) {
+        e.preventDefault();
+        const eqId = document.getElementById('emissaoEquipamentoId').value;
+        const eq = equipamentos.find(item => item.id == eqId);
+        const cli = clientes.find(c => c.id == eq.clienteId);
+
+        const anoAtual = new Date().getFullYear();
+        const seq = (4293 + certificados.length).toString().padStart(8, '0');
+        const numMPJ = `MPJ${seq}/${anoAtual}`;
+
+        const cert = {
+            num: numMPJ,
+            equipNum: eq.num,
+            placa: eq.placa,
+            razao: cli.razao,
+            cnpj: cli.cnpj,
+            data: document.getElementById('emissaoData').value,
+            condutor: eq.condutor,
+            cpf: eq.cpf,
+            hora: document.getElementById('emissaoHora').value,
+            processo: document.getElementById('emissaoProcesso').value,
+            detector: document.getElementById('emissaoDetector').value,
+            calibracao: document.getElementById('emissaoCalibracao').value,
+            lacre: document.getElementById('emissaoLacre').value,
+            vols: [eq.v1, eq.v2, eq.v3, eq.v4, eq.v5, eq.v6, eq.v7, eq.v8],
+            prods: [
+                document.getElementById('emP1').value,
+                document.getElementById('emP2').value,
+                document.getElementById('emP3').value,
+                document.getElementById('emP4').value
+            ]
+        };
+
+        certificados.unshift(cert);
+        localStorage.setItem('mjp_certificados', JSON.stringify(certificados));
+        renderHistorico();
+        exibirCertificado(cert);
+        switchTab('tab-visualizar');
+    }
+
+    function renderHistorico(lista = certificados) {
+        document.getElementById('historicoTableBody').innerHTML = lista.map(c => `
+            <tr>
+                <td><b style="color:var(--danger);">${c.num}</b></td>
+                <td><b>${c.equipNum}</b></td>
+                <td>${c.placa}</td>
+                <td>${c.razao}</td>
+                <td>${c.data}</td>
+                <td><button class="btn btn-secondary" onclick='abrirCertificado("${c.num}")'>📄 Abrir Relatório</button></td>
+            </tr>
+        `).join('');
+    }
+
+    function filtrarGeral() {
+        const t = document.getElementById('searchInput').value.toLowerCase();
+        const res = certificados.filter(c => 
+            c.equipNum.toLowerCase().includes(t) ||
+            c.placa.toLowerCase().includes(t) ||
+            c.razao.toLowerCase().includes(t) ||
+            c.cnpj.toLowerCase().includes(t) ||
+            c.num.toLowerCase().includes(t)
+        );
+        renderHistorico(res);
+    }
+
+    function abrirCertificado(numMPJ) {
+        const cert = certificados.find(c => c.num === numMPJ);
+        if(cert) {
+            exibirCertificado(cert);
+            switchTab('tab-visualizar');
+        }
+    }
+
+    function exibirCertificado(c) {
+        document.getElementById('vNumCertificado').innerText = c.num;
+        document.getElementById('vEquip').innerText = c.equipNum;
+        document.getElementById('vRazao').innerText = c.razao;
+        document.getElementById('vPlaca').innerText = c.placa;
+        document.getElementById('vData').innerText = c.data;
+        document.getElementById('vProcesso').innerText = c.processo;
+        document.getElementById('vLacre').innerText = c.lacre;
+        document.getElementById('vDetector').innerText = c.detector;
+        document.getElementById('vCalibracao').innerText = c.calibracao;
+        document.getElementById('vHora').innerText = c.hora;
+        document.getElementById('vCondutorNome').innerText = c.condutor;
+        document.getElementById('vCondutorCPF').innerText = c.cpf;
+
+        for(let i=1; i<=8; i++) {
+            document.getElementById(`vVol${i}`).innerText = c.vols ? c.vols[i-1] : '-';
+        }
+        for(let i=1; i<=4; i++) {
+            document.getElementById(`vProd${i}`).innerText = c.prods ? c.prods[i-1] : '-';
+        }
+    }
+</script>
+</body>
+</html>
